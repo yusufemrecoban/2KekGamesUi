@@ -1,0 +1,43 @@
+{
+    "bookPages": [
+        {
+            "hierarchParentName": "cards1",
+            "Images": [
+                {
+                    "spriteName": "sprites/1",
+                    "materialName": "shader/Front",
+                    "posX": 200.0,
+                    "posY": 135.0,
+                    "width": 115.0,
+                    "height": 150.0
+                },
+                {
+                    "spriteName": "sprites/2",
+                    "materialName": "shader/Front",
+                    "posX": 500.0,
+                    "posY": 135.0,
+                    "width": 115.0,
+                    "height": 150.0
+                }
+            ],
+            "Texts": [
+                {
+                    "textContent": "Hello World",
+                    "textMaterialName":"shader/Front",
+                    "fontName": "fonts/LiberationSans",
+                    "fontSize": 25,
+                    "textColor": {
+                        "r": 255,
+                        "g": 255,
+                        "b": 255,
+                        "a": 255
+                    },
+                    "posX": 200.0,
+                    "posY": 0.0,
+                    "width": 100.0,
+                    "height": 300.0
+                }
+            ]
+        }
+    ]
+}

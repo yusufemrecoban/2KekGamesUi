@@ -1,0 +1,1 @@
+{"bookPages": [{"hierarchParentName": "cards1","Images": [{"spriteName": "sprites/1", "materialName": "shader/Front", "posX": 100.0,"posY": 100.0,"width": 200.0,"height": 200.0}]},{"hierarchParentName": "cards1","Images": [{"spriteName": "sprites/2", "materialName": "shader/Front", "posX": -100.0,"posY": -100.0,"width": 200.0,"height": 200.0}]}]}
