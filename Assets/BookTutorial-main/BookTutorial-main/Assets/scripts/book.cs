@@ -11,10 +11,12 @@ public class book : MonoBehaviour
     [SerializeField] GameObject backButton;
     [SerializeField] GameObject forwardButton;
 
-    
+    private int currentPageIndex; // Sayfa indeksini tutan değişken
+
     public int GetPageIndex()
     {
         return index;
+        return currentPageIndex;
     }
 
 
@@ -23,6 +25,12 @@ public class book : MonoBehaviour
         InitialState();
     }
 
+    // Sayfa indeksini değiştirmek için bir metot ekleyebilirsiniz
+    public void SetPageIndex(int index)
+    {
+        currentPageIndex = index;
+    }
+    
     public void InitialState()
     {
         for (int i=0; i<pages.Count; i++)
@@ -40,9 +48,10 @@ public class book : MonoBehaviour
         index++;
         float angle = 180; //in order to rotate the page forward, you need to set the rotation by 180 degrees around the y axis
         ForwardButtonActions();
-        pages[index].SetAsLastSibling();
+        int newIndex=index+1;
+        pages[newIndex].SetAsLastSibling();
         StartCoroutine(Rotate(angle, true));
-
+        
     }
 
     public void ForwardButtonActions()
@@ -77,9 +86,11 @@ public class book : MonoBehaviour
             backButton.SetActive(false); //if the page is first then we turn off the back button
         }
     }
+    
 
     IEnumerator Rotate(float angle, bool forward)
     {
+        
         float value = 0f;
         while (true)
         {

@@ -26,18 +26,43 @@ public class ScrollItem : MonoBehaviour, IPointerDownHandler, IPointerUpHandler,
 
     private string uniqueID; // Benzersiz ID
 
+    [SerializeField] private book bookScript; // Aktif sayfayı almak için book script referansı
+
     private void Start()
     {
-        // Hedef parent'ı bul
-        GameObject targetObject = GameObject.Find("Canvas/pages/page1/cards1");
+        if (bookScript == null)
+        {
+            bookScript = FindObjectOfType<book>(); // book scriptini otomatik bul
+        }
+
+        if (bookScript == null)
+        {
+            Debug.LogError("Book script is not assigned or not found in the scene!");
+            return;
+        }
+
+        // Aktif sayfa indexini alın
+        int currentIndex = bookScript.GetPageIndex() + 2; // İlk sayfa 1 olacak
+
+        if (currentIndex <= 0)
+        {
+            Debug.LogError("Invalid currentIndex value. Ensure bookScript.GetPageIndex() returns a valid index.");
+            return;
+        }
+
+        // Dinamik yol oluştur
+        string targetPath = $"Canvas/pages/page{currentIndex}/cards{currentIndex}";
+        GameObject targetObject = GameObject.Find(targetPath);
+
         if (targetObject != null)
         {
             targetParent = targetObject.transform;
             targetRectTransform = targetObject.GetComponent<RectTransform>();
+            Debug.Log($"Target parent set to: {targetPath}");
         }
         else
         {
-            Debug.LogError("Target object 'cards1' not found. Please check the hierarchy path.");
+            Debug.LogError($"Target path not found: {targetPath}");
         }
 
         // Orijinal parent ve pozisyonu kaydet
@@ -46,10 +71,73 @@ public class ScrollItem : MonoBehaviour, IPointerDownHandler, IPointerUpHandler,
 
         // Pozisyonları yükle
         LoadPosition();
-        // PlayerPrefs.DeleteAll();
-        // PlayerPrefs.Save();
-        // Debug.Log("All PlayerPrefs data deleted.");
     }
+    private void CheckVisibility()
+{
+    if (string.IsNullOrEmpty(uniqueID))
+    {
+        Debug.LogWarning("Unique ID is not set. Cannot check visibility.");
+        return;
+    }
+
+    string key = $"{uniqueID}_Position";
+
+    // PlayerPrefs'teki pozisyon ve parent bilgisini al
+    if (PlayerPrefs.HasKey(key))
+    {
+        string savedData = PlayerPrefs.GetString(key);
+        string[] values = savedData.Split(',');
+
+        if (values.Length >= 4)
+        {
+            string savedParentPath = values[3];
+
+            // Eğer parent yolu "Canvas/Scroll View/Viewport/Content" ise görünmezlik işlemi yapılmasın
+            if (savedParentPath == "Canvas/Scroll View/Viewport/Content")
+            {
+                Debug.Log($"{uniqueID} is in the default parent (Canvas/Scroll View/Viewport/Content). Visibility check skipped.");
+                return;
+            }
+
+            // Aktif sayfa index'i (bookScript'ten gelen currentIndex)
+            int currentIndex = bookScript.GetPageIndex() + 2;
+            string currentParentPath = $"Canvas/pages/page{currentIndex}/cards{currentIndex}";
+
+            // Kaydedilmiş parent yoluyla aktif parent yolunu karşılaştır
+            if (savedParentPath != currentParentPath)
+            {
+                // Farklıysa objeyi görünmez yap
+                if (childImage != null)
+                {
+                    childImage.enabled = false;
+                    Debug.Log($"{uniqueID} is now invisible because saved path ({savedParentPath}) is not the current path ({currentParentPath}).");
+                }
+                else
+                {
+                    Debug.LogWarning($"Child image is not assigned for {uniqueID}.");
+                }
+            }
+            else
+            {
+                // Aynıysa objeyi görünür yap
+                if (childImage != null)
+                {
+                    childImage.enabled = true;
+                    Debug.Log($"{uniqueID} is visible because saved path matches the current path.");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"Invalid saved data for {uniqueID}: {savedData}");
+        }
+    }
+    else
+    {
+        Debug.LogWarning($"No saved data found for {uniqueID}. Cannot check visibility.");
+    }
+}
+
 
     public void ChangeImage(Sprite image)
     {
@@ -84,6 +172,7 @@ public class ScrollItem : MonoBehaviour, IPointerDownHandler, IPointerUpHandler,
 
     private void Update()
     {
+        CheckVisibility();
         if (isPressing && !isDragging)
         {
             pressTime += Time.deltaTime;
@@ -101,25 +190,51 @@ public class ScrollItem : MonoBehaviour, IPointerDownHandler, IPointerUpHandler,
             }
         }
     }
+    
 
     private void MoveToTarget()
+{
+    // Aktif sayfa indexini al
+    int currentIndex = bookScript.GetPageIndex() + 2; // Eğer mantıklıysa bırakın, yoksa +2 eklemeyin
+
+    if (currentIndex <= 0)
     {
-        if (targetParent != null)
-        {
-            this.transform.SetParent(targetParent, false);
-
-            RectTransform rectTransform = GetComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            rectTransform.anchoredPosition = Vector2.zero;
-
-            Debug.Log("Item moved to target parent and centered.");
-
-            // Pozisyonu kaydet
-            SavePosition();
-        }
+        Debug.LogError("Invalid currentIndex value in MoveToTarget. Ensure bookScript.GetPageIndex() returns a valid index.");
+        return;
     }
+
+    // Dinamik yol oluştur
+    string targetPath = $"Canvas/pages/page{currentIndex}/cards{currentIndex}";
+    Debug.Log($"MoveToTarget: Calculated target path: {targetPath}");
+
+    GameObject targetObject = GameObject.Find(targetPath);
+
+    if (targetObject != null)
+    {
+        targetParent = targetObject.transform;
+        targetRectTransform = targetObject.GetComponent<RectTransform>();
+
+        // Objeyi hedef parent'a taşı
+        this.transform.SetParent(targetParent, false);
+
+        RectTransform rectTransform = GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+
+        Debug.Log($"Item moved to target: {targetPath}");
+
+        // Pozisyonu kaydet
+        SavePosition();
+    }
+    else
+    {
+        Debug.LogError($"MoveToTarget: Target path not found: {targetPath}");
+    }
+}
+
+
 
     private void MoveToOriginal()
     {
@@ -168,18 +283,38 @@ public class ScrollItem : MonoBehaviour, IPointerDownHandler, IPointerUpHandler,
         }
 
         string key = $"{uniqueID}_Position";
-        Vector3 position = this.transform.localPosition;
-        string parentName = this.transform.parent != null ? this.transform.parent.name : "None";
 
-        string data = $"{position.x},{position.y},{position.z},{parentName}";
+        // Pozisyon koordinatlarını yuvarla
+        int x = Mathf.RoundToInt(this.transform.localPosition.x);
+        int y = Mathf.RoundToInt(this.transform.localPosition.y);
+        int z = 0;
+
+        // Parent'ın tam yolunu al
+        string parentPath = GetFullParentPath(this.transform.parent);
+
+        // Yuvarlanmış pozisyon ve parent yolunu kaydet
+        string data = $"{x},{y},{z},{parentPath}";
         PlayerPrefs.SetString(key, data);
         PlayerPrefs.Save();
 
         Debug.Log($"Position saved for {uniqueID}: {data}");
     }
 
+    private string GetFullParentPath(Transform parent)
+    {
+        if (parent == null)
+            return "None";
 
-    private void LoadPosition()
+        string path = parent.name;
+        while (parent.parent != null)
+        {
+            parent = parent.parent;
+            path = $"{parent.name}/{path}";
+        }
+        return path;
+    }
+
+   private void LoadPosition()
     {
         if (string.IsNullOrEmpty(uniqueID))
         {
@@ -194,44 +329,33 @@ public class ScrollItem : MonoBehaviour, IPointerDownHandler, IPointerUpHandler,
             string data = PlayerPrefs.GetString(key);
             string[] values = data.Split(',');
 
-            if (values.Length >= 6)
+            if (values.Length >= 4)
             {
-                // x ve y'nin tam sayıları birleşiyor, z doğrudan alınıyor
-                string xString = values[0] + "." + values[1];
-                string yString = values[2] + "." + values[3];
-                string zString = values[4];
-                string parentName = values[5];
+                float.TryParse(values[0], out float x);
+                float.TryParse(values[1], out float y);
+                float.TryParse(values[2], out float z);
+                string parentPath = values[3];
 
-                // Koordinatları float'a dönüştür ve işle
-                if (float.TryParse(xString, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x) &&
-                    float.TryParse(yString, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y) &&
-                    float.TryParse(zString, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z))
+                Debug.Log($"Attempting to load parent: {parentPath}");
+
+                // Pozisyonu uygula
+                this.transform.localPosition = new Vector3(x, y, z);
+
+                // Kaydedilen parent'ı bul ve objeyi oraya taşı
+                Transform parentTransform = GameObject.Find(parentPath)?.transform;
+                if (parentTransform != null)
                 {
-                    // Transform pozisyonunu ayarla
-                    this.transform.localPosition = new Vector3(x, y, z);
-
-                    // Parent nesnesini bul ve ata
-                    Transform parentTransform = GameObject.Find(parentName)?.transform;
-
-                    if (parentTransform != null)
-                    {
-                        this.transform.SetParent(parentTransform, false);
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"Parent '{parentName}' not found for {uniqueID}. Keeping original parent.");
-                    }
-
-                    Debug.Log($"Position and parent loaded for {uniqueID}: {data}");
+                    this.transform.SetParent(parentTransform, false);
+                    Debug.Log($"Parent found and set for {uniqueID}: {parentPath}");
                 }
                 else
                 {
-                    Debug.LogWarning($"Invalid position data for {uniqueID}. Resetting to default position.");
+                    Debug.LogWarning($"Parent '{parentPath}' not found for {uniqueID}. Keeping original parent.");
                 }
             }
             else
             {
-                Debug.LogWarning($"Incomplete data for {uniqueID}. Expected 6 elements, got {values.Length}: {data}");
+                Debug.LogWarning($"Invalid data for {uniqueID}: {data}");
             }
         }
         else
